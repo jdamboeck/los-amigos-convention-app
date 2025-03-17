@@ -12,6 +12,15 @@
 
     <title>Los Amigos MotU Convention</title>
 
+    <link rel="manifest" href="/manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker registriert:', reg))
+                .catch(err => console.log('Service Worker Registrierung fehlgeschlagen:', err));
+        }
+    </script>
+
 </head>
 <body>
     <div class="loading-overlay">
