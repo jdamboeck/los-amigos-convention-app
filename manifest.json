@@ -3,8 +3,8 @@
     "short_name": "MotU Convention",
     "start_url": "/index.html",
     "display": "standalone",
-    "background_color": "#ECEFF1",
-    "theme_color": "#039be5",
+    "background_color": "#020B10",
+    "theme_color": "#020B10",
     "icons": [
         {
             "src": "/favicon.ico",
