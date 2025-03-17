@@ -49,6 +49,13 @@
                 </div>
             </div>
 
+            <div class="content-card" >
+                <h3 class="fw-bold">Künstler</h3>
+                <div id="artists-display">
+
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -76,7 +83,7 @@
                 showDefaultContent();
             }
             
-            fetchQRCodeCount();
+            fetchArtistsCount();
         });
 
         async function handleCodeParameter(code) {
@@ -102,14 +109,9 @@
                     scannedCodes = [];
                 }
 
-                if (scannedCodes.some(existingCode => existingCode?.toLowerCase() === code?.toLowerCase())) {
-                    showError('Du hast diesen QR-Code bereits gescannt!');
-                    return;
-                }
-
 
                 const response = await fetch(
-                    `${WP_API_URL}/qr_codes?meta_key=code&meta_value=${encodeURIComponent(code)}`
+                    `${WP_API_URL}/artists?meta_key=code&meta_value=${encodeURIComponent(code)}&_fields=id,title,content`
                 );
 
                 console.log('API Antwort:', response);
@@ -125,7 +127,7 @@
                 }
 
                 if (data.length === 0) {
-                    showError('Ungültiger QR-Code');
+                    showError('Ungültiger Künstler');
                     return;
                 }
 
@@ -134,8 +136,9 @@
                 displayContent(qrData);
                 
                 try {
-                    const updatedCodes = [...scannedCodes, code];
-                    localStorage.setItem('scannedCodes', JSON.stringify(updatedCodes));
+                    const scannedCodesSet = new Set(scannedCodes);
+                    scannedCodesSet.add(code);
+                    localStorage.setItem('scannedCodes', JSON.stringify([...scannedCodesSet]));
 
                 } catch (storageError) {
                     console.error('Speicherfehler:', storageError);
@@ -200,23 +203,22 @@
             const contentDiv = document.getElementById('content-display');
             contentDiv.innerHTML = `
                 <h3 class="fw-bold">Willkommen bei der Los Amigos MotU Convention!</h3>
-                <p>Du hast alle QR-Codes eingesammelt. Sehr gut!</p>
+                <p>Du hast alle Künstler besucht. Sehr gut!</p>
             `;
         }
     
 
-
-        async function fetchQRCodeCount() {
+        async function fetchArtistsCount() {
             try {
-                const response = await fetch(`${WP_API_URL}/qr-codes-count`);
+                const response = await fetch(`${WP_API_URL}/artists-count`);
                 if (!response.ok) {
-                    throw new Error('Netzwerkantwort war nicht ok');
+                    throw new Error('Error fetching artists count');
                 }
                 const count = await response.json();
-                console.log('Anzahl der QR-Codes:', count);
-                updateProgress(count)
-            } catch (error) {
-                console.error('Fehler beim Abrufen der QR-Codes:', error);
+                updateProgress(count);
+                fetchScannedArtists(); // Gescannte Künstler laden
+            } catch(error) {
+                console.error('Fehler beim Abrufen der Künstler:', error);
             }
         }
 
@@ -278,6 +280,28 @@
             }
         }
 
+        async function fetchScannedArtists() {
+            try {
+                const scannedCodes = JSON.parse(localStorage.getItem('scannedCodes') || '[]');
+                if(scannedCodes.length === 0) {
+                    document.getElementById('artists-display').innerHTML = '<p>Noch keine Künstler gescannt</p>';
+                    return;
+                }
+
+                const response = await fetch(
+                    `${WP_API_URL}/scanned-artists?codes=${encodeURIComponent(scannedCodes.join(','))}`
+                );
+                
+                const artists = await response.json();
+                displayArtists(artists);
+                
+            } catch(error) {
+                console.error('Fehler beim Laden der Künstler:', error);
+                document.getElementById('artists-display').innerHTML = 
+                    '<p class="text-danger">Fehler beim Laden der Künstler</p>';
+            }
+        }
+
 
 
         function showMedalDetails(medalId) {
@@ -306,6 +330,47 @@
             if (e.key === 'Escape') closeModal();
         });
 
+
+
+
+        function displayArtists(artists) {
+            let artistsHTML = '';
+            
+            for (let i = 0; i < artists.length; i++) {
+                const artist = artists[i];
+                artistsHTML += `
+                    <div class="artist-item" data-artist='${JSON.stringify(artist).replace(/'/g, "\\'")}'>
+                        <div>${artist.title}</div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('artists-display').innerHTML = `
+                <div class="artists-grid">${artistsHTML}</div>
+            `;
+
+            // Add click listeners to all artist items
+            document.querySelectorAll('.artist-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const artistData = JSON.parse(item.dataset.artist);
+                    showArtistDetails(artistData);
+                });
+            });
+        }
+
+        function showArtistDetails(artist) {    
+            const modal = document.getElementById('medal-modal');
+            modal.querySelector('#modal-title').innerHTML = artist.title;
+            modal.querySelector('#modal-image').style.display = 'none';
+            
+            const requiredElement = modal.querySelector('#modal-required').parentElement;
+            requiredElement.style.display = 'none';
+            
+            modal.querySelector('#modal-description').innerHTML = artist.content;
+            modal.style.display = 'flex';
+        }
+
+        
 
 
         function fireConfetti() {
