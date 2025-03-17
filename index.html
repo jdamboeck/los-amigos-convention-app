@@ -349,7 +349,6 @@
                 <div class="artists-grid">${artistsHTML}</div>
             `;
 
-            // Add click listeners to all artist items
             document.querySelectorAll('.artist-item').forEach(item => {
                 item.addEventListener('click', () => {
                     const artistData = JSON.parse(item.dataset.artist);

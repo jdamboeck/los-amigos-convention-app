@@ -188,13 +188,14 @@ canvas {
 /* Artists */
 .artists-grid {
   display: grid;
+  margin-top: 1rem;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 1rem;
 }
 
 .artist-item {
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 1rem;
   border-radius: 8px;
   background: rgba(255,255,255,0.1);
   transition: transform 0.2s;
