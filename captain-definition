@@ -4,7 +4,7 @@
     "FROM nginx:alpine",
     "WORKDIR /usr/share/nginx/html",
     "RUN rm -rf ./*",
-    "ADD http://worldtimeapi.org/api/ip /time.tmp",
+    "ADD https://api.github.com/repos/$USER/$REPO/git/refs/heads/$BRANCH version.json",
     "RUN apk add --no-cache git && \\",
     "    git clone https://github.com/jdamboeck/losamigos . && \\",
     "    git pull && \\",
