@@ -313,7 +313,7 @@
                 }
 
                 if (data.length === 0) {
-                    showError('Ungültiger Künstler');
+                    showError('Ungültiger Gast');
                     return;
                 }
 
@@ -389,7 +389,7 @@
             const contentDiv = document.getElementById('content-display');
             contentDiv.innerHTML = `
                 <h3 class="fw-bold">Willkommen bei der Los Amigos MotU Convention!</h3>
-                <p>Du hast alle Künstler besucht. Sehr gut!</p>
+                <p>Du hast alle Gäste besucht. Sehr gut!</p>
             `;
         }
     
@@ -402,9 +402,9 @@
                 }
                 const count = await response.json();
                 updateProgress(count);
-                fetchScannedArtists(); // Gescannte Künstler laden
+                fetchScannedArtists(); // Gescannte Gäste laden
             } catch(error) {
-                console.error('Fehler beim Abrufen der Künstler:', error);
+                console.error('Fehler beim Abrufen der Gäste:', error);
             }
         }
 
@@ -470,7 +470,7 @@
             try {
                 const scannedCodes = JSON.parse(localStorage.getItem('scannedCodes') || '[]');
                 if(scannedCodes.length === 0) {
-                    document.getElementById('artists-display').innerHTML = '<p>Noch keine Künstler gescannt</p>';
+                    document.getElementById('artists-display').innerHTML = '<p>Noch keine Gäste gescannt</p>';
                     return;
                 }
 
@@ -482,9 +482,9 @@
                 displayArtists(artists);
                 
             } catch(error) {
-                console.error('Fehler beim Laden der Künstler:', error);
+                console.error('Fehler beim Laden der Gäste:', error);
                 document.getElementById('artists-display').innerHTML = 
-                    '<p class="text-danger">Fehler beim Laden der Künstler</p>';
+                    '<p class="text-danger">Fehler beim Laden der Gäste</p>';
             }
         }
 
