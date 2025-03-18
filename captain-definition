@@ -4,14 +4,11 @@
     "FROM nginx:alpine",
     "WORKDIR /usr/share/nginx/html",
     "RUN rm -rf ./*",
-    "# Add the current date/time as a comment to force cache invalidation",
     "RUN apk add --no-cache git && \\",
-    "    git clone https://github.com/Nilsus183/losamigos . && \\",
-    "    git pull && \\  # Always pull the latest after cloning",
+    "    git clone https://github.com/jdamboeck/losamigos . && \\",
+    "    git pull && \\",
     "    apk del git",
-    "# Expose port 80",
     "EXPOSE 80",
-    "# Start Nginx when the container launches",
     "CMD [\"nginx\", \"-g\", \"daemon off;\"]"
   ]
 }
