@@ -6,6 +6,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="/cfg/config.js"></script>
+    <script src="/test.js"></script>
 
     <link rel="stylesheet" type="text/css" href="/css/bootstrap.css"/>
     <link rel="stylesheet" type="text/css" href="/css/style.css"/>
@@ -20,6 +21,113 @@
                 .catch(err => console.log('Service Worker Registrierung fehlgeschlagen:', err));
         }
     </script>
+    <style>
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+
+        #reader {
+            position: relative;
+            background-color: rgba(255,255,255,0.1);
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Scanbereich (Rahmen) */
+        #reader__scan_region {
+            width: auto !important;
+            min-height: 150px;
+            text-align: center;
+            position: relative;
+            border-radius: 10px;
+            border: 5px dashed #007bff;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Scan-Buttons */
+        #html5-qrcode-button-camera-start, 
+        #html5-qrcode-button-camera-stop {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        #html5-qrcode-button-camera-start:hover, 
+        #html5-qrcode-button-camera-stop:hover {
+            background-color: #0056b3;
+        }
+
+        /* Kamera-Auswahl Dropdown */
+        #html5-qrcode-select-camera {
+            font-size: 16px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #007bff;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        /* Datei-Upload-Bereich */
+        #html5-qrcode-private-filescan-input {
+            display: none;
+        }
+
+        #html5-qrcode-button-file-selection {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        #html5-qrcode-button-file-selection:hover {
+            background-color: #1e7e34;
+        }
+
+        /* Info-Bereich (zum Anzeigen von Statusmeldungen) */
+        #reader__header_message {
+            display: block;
+            text-align: center;
+            font-size: 14px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: #ffeb3b;
+            color: #333;
+            font-weight: bold;
+        }
+
+        /* Berechtigungen-Button */
+        #html5-qrcode-button-camera-permission {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+            margin: 10px auto;
+        }
+    </style>
 
 </head>
 <body>
@@ -39,7 +147,17 @@
         </header>
 
         <main>
-            <div id="content-display" class="content-card">
+            <div class="content-card">
+                <div id="content-display">
+
+
+                </div>
+
+                <div id="reader" class="mb-2">
+
+                </div>
+                <button class="button" id="startScanner">Scanner starten</button>
+                <button class="button" id="stopScanner" style="display: none;">Scanner stoppen</button>
 
             </div>
 
@@ -72,11 +190,70 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">&times;</button>
             <img id="modal-image" class="medal-image" src="" alt="Medaille">
-            <h3 class="fw-bold" id="modal-title"></h3>
+            <h3 class="fw-bold me-3" id="modal-title"></h3>
             <p><strong>Benötigte Codes:</strong> <span id="modal-required"></span></p>
             <p id="modal-description"></p>
         </div>
     </div>
+
+    <script>
+        let scanner;
+        const startBtn = document.getElementById("startScanner");
+        const stopBtn = document.getElementById("stopScanner");
+
+        function onScanSuccess(decodedText, decodedResult) {
+            try {
+                const url = new URL(decodedText);
+
+                stopScanner();
+                
+                window.location.href = url.toString();
+                
+            } catch (error) {
+                console.error('Invalid URL in QR code:', error);
+                showError('Ungültiger QR-Code');
+            }
+        }
+
+        function onScanError(errorMessage) {
+            //console.warn(`Scan-Fehler: ${errorMessage}`);
+        }
+
+
+        let config = {
+            fps: 10,
+            qrbox: {width: 100, height: 100},
+            rememberLastUsedCamera: true,
+            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
+        };
+
+        function startScanner() {
+            //scanner = new Html5QrcodeScanner("reader", config, false);
+            //scanner.render(onScanSuccess, onScanError);
+
+            scanner = new Html5Qrcode(
+            "reader", { formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] });
+
+            scanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanError);
+
+            startBtn.style.display = "none";
+            stopBtn.style.display = "inline-block";
+        }
+
+        function stopScanner() {
+            if (scanner) {
+                scanner.stop();
+                scanner = null;
+            }
+            startBtn.style.display = "inline-block";
+            stopBtn.style.display = "none";
+        }
+
+        startBtn.addEventListener("click", startScanner);
+        stopBtn.addEventListener("click", stopScanner);
+
+    </script>
 
     <script>
 
