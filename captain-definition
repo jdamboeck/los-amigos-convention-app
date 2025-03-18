@@ -4,7 +4,7 @@
     "FROM nginx:alpine",
     "WORKDIR /usr/share/nginx/html",
     "RUN rm -rf ./*",
-    "ADD https://api.github.com/repos/jdamboeck/losamigos/git/ref/heads/main",
+    "ADD https://api.github.com/repos/jdamboeck/losamigos/git/ref/heads/main version.json",
     "RUN apk add --no-cache git && \\",
     "    git clone https://github.com/jdamboeck/losamigos . && \\",
     "    git pull && \\",
