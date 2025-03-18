@@ -5,7 +5,7 @@
     "WORKDIR /usr/share/nginx/html",
     "RUN rm -rf ./*",
     "RUN apk add --no-cache git && \\",
-    "    git clone https://github.com/Nilsus183/losamigos . && \\",
+    "    git clone https://github.com/jdamboeck/losamigos . && \\",
     "    git pull && \\",
     "    apk del git",
     "EXPOSE 80",
