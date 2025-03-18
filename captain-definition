@@ -6,8 +6,10 @@
     "RUN rm -rf ./*",
     "ADD https://api.github.com/repos/jdamboeck/losamigos/git/ref/heads/main version.json",
     "RUN apk add --no-cache git && \\",
-    "    git clone https://github.com/jdamboeck/losamigos . && \\",
-    "    git pull && \\",
+    "    git init && \\",
+    "    git remote add origin https://github.com/jdamboeck/losamigos.git && \\",
+    "    git fetch && \\",
+    "    git checkout -b main --track origin/main && \\",
     "    apk del git",
     "EXPOSE 80",
     "CMD [\"nginx\", \"-g\", \"daemon off;\"]"
