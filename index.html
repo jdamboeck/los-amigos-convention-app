@@ -8,6 +8,11 @@
     <script src="/cfg/config.js"></script>
     <script src="/test.js"></script>
 
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mediaelement@4.2.17/build/mediaelementplayer.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mediaelement@4.2.17/build/mediaelement-and-player.min.js"></script>
+
+
     <link rel="stylesheet" type="text/css" href="/css/bootstrap.css"/>
     <link rel="stylesheet" type="text/css" href="/css/style.css"/>
 
@@ -153,7 +158,7 @@
 
                 </div>
 
-                <div id="reader" class="mb-2">
+                <div id="reader" class="mb-4">
 
                 </div>
                 <button class="button" id="startScanner">Scanner starten</button>
@@ -183,16 +188,22 @@
                 </div>
             </div>
 
+            <div class="content-card mb-3" >
+                <h3 class="fw-bold">Spots</h3>
+                <div id="spots-display">
+
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <div class="modal-overlay" id="medal-modal">
+    <div class="modal-overlay" id="modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">&times;</button>
-            <img id="modal-image" class="medal-image" src="" alt="Medaille">
+            
             <h3 class="fw-bold me-3" id="modal-title"></h3>
-            <p><strong>Benötigte Codes:</strong> <span id="modal-required"></span></p>
-            <p id="modal-description"></p>
+            <p id="modal-description" class="modal-description"></p>
         </div>
     </div>
 
@@ -269,66 +280,82 @@
                 showDefaultContent();
             }
             
-            fetchArtistsCount();
+            fetchCodeCount();
         });
 
         async function handleCodeParameter(code) {
             showLoading(true);
-            
+
             try {
                 if (!code || typeof code !== 'string') {
                     throw new Error('Ungültiger Code-Parameter');
                 }
 
-                let scannedCodes = [];
+                let scannedGuests = [];
+                let scannedSpots = [];
+
                 try {
-                    const storedCodes = localStorage.getItem('scannedCodes');
-                    scannedCodes = storedCodes ? JSON.parse(storedCodes) : [];
-                    
-                    if (!Array.isArray(scannedCodes)) {
-                        console.warn('Ungültiges gespeichertes Format, wird zurückgesetzt');
-                        scannedCodes = [];
+                    scannedGuests = JSON.parse(localStorage.getItem('scannedGuests')) || [];
+                    scannedSpots = JSON.parse(localStorage.getItem('scannedSpots')) || [];
+
+                    if (!Array.isArray(scannedGuests)) {
+                        console.warn('Ungültiges gespeichertes Format für scannedGuests, wird zurückgesetzt');
+                        scannedGuests = [];
                     }
 
+                    if (!Array.isArray(scannedSpots)) {
+                        console.warn('Ungültiges gespeichertes Format für scannedSpots, wird zurückgesetzt');
+                        scannedSpots = [];
+                    }
                 } catch (storageError) {
-                    console.error('Fehler beim Laden der Codes:', storageError);
-                    scannedCodes = [];
+                    console.error('Fehler beim Laden der gespeicherten Codes:', storageError);
                 }
 
+                // Prüfe, ob der Code zu "artists" oder "spots" gehört
+                const [guastResponse, spotResponse] = await Promise.all([
+                    fetch(`${WP_API_URL}/artists?meta_key=code&meta_value=${encodeURIComponent(code)}&_fields=id,title,content`),
+                    fetch(`${WP_API_URL}/spots?meta_key=code&meta_value=${encodeURIComponent(code)}&_fields=id,title,content`)
+                ]);
 
-                const response = await fetch(
-                    `${WP_API_URL}/artists?meta_key=code&meta_value=${encodeURIComponent(code)}&_fields=id,title,content`
-                );
-
-                console.log('API Antwort:', response);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP Fehler! Status: ${response.status}`);
+                if (!guastResponse.ok || !spotResponse.ok) {
+                    throw new Error(`HTTP Fehler! Status: ${guastResponse.status}, ${spotResponse.status}`);
                 }
 
-                const data = await response.json();
-                
-                if (!Array.isArray(data)) {
+                const artistData = await guastResponse.json();
+                const spotData = await spotResponse.json();
+
+                if (!Array.isArray(artistData) || !Array.isArray(spotData)) {
                     throw new Error('Ungültiges Antwortformat von der API');
                 }
 
-                if (data.length === 0) {
-                    showError('Ungültiger Gast');
-                    return;
-                }
+                if (artistData.length > 0) {
+                    // Code gehört zu einem "Guest"
+                    const qrData = artistData[0];
+                    displayContent(qrData);
 
-                const qrData = data[0];
+                    try {
+                        const scannedGuestsSet = new Set(scannedGuests);
+                        scannedGuestsSet.add(code);
+                        localStorage.setItem('scannedGuests', JSON.stringify([...scannedGuestsSet]));
+                    } catch (storageError) {
+                        console.error('Speicherfehler:', storageError);
+                        showError('Fehler beim Speichern des Fortschritts');
+                    }
+                } else if (spotData.length > 0) {
+                    // Code gehört zu einem "Spot"
+                    const qrData = spotData[0];
+                    displayContent(qrData);
 
-                displayContent(qrData);
-                
-                try {
-                    const scannedCodesSet = new Set(scannedCodes);
-                    scannedCodesSet.add(code);
-                    localStorage.setItem('scannedCodes', JSON.stringify([...scannedCodesSet]));
-
-                } catch (storageError) {
-                    console.error('Speicherfehler:', storageError);
-                    showError('Fehler beim Speichern des Fortschritts');
+                    try {
+                        const scannedSpotsSet = new Set(scannedSpots);
+                        scannedSpotsSet.add(code);
+                        localStorage.setItem('scannedSpots', JSON.stringify([...scannedSpotsSet]));
+                    } catch (storageError) {
+                        console.error('Speicherfehler:', storageError);
+                        showError('Fehler beim Speichern des Fortschritts');
+                    }
+                } else {
+                    showError('Ungültiger Code');
                 }
 
             } catch (error) {
@@ -341,6 +368,7 @@
 
 
 
+
         function displayContent(qrData) {
             const contentDiv = document.getElementById('content-display');
             contentDiv.innerHTML = `
@@ -350,13 +378,17 @@
         }
 
         function updateProgress(totalCodes) {
-            const scannedCodes = JSON.parse(localStorage.getItem('scannedCodes') || '[]');
-            const progress = (scannedCodes.length / totalCodes) * 100;
+            const scannedGuests = JSON.parse(localStorage.getItem('scannedGuests') || '[]');
+            const scannedSpots = JSON.parse(localStorage.getItem('scannedSpots') || '[]');
+
+            const scannedCodes = scannedGuests.length + scannedSpots.length;
+
+            const progress = (scannedCodes / totalCodes) * 100;
             
             document.getElementById('progress-fill').style.width = `${progress}%`;
-            document.getElementById('progress-text').textContent = `${scannedCodes.length}/${totalCodes} Codes gescannt`;
+            document.getElementById('progress-text').textContent = `${scannedCodes}/${totalCodes} Codes gescannt`;
 
-            if (scannedCodes.length == totalCodes) {
+            if (scannedCodes == totalCodes) {
 
                 fireConfetti();
 
@@ -394,17 +426,19 @@
         }
     
 
-        async function fetchArtistsCount() {
+        async function fetchCodeCount() {
             try {
-                const response = await fetch(`${WP_API_URL}/artists-count`);
+                const response = await fetch(`${WP_API_URL}/code-count`);
                 if (!response.ok) {
-                    throw new Error('Error fetching artists count');
+                    throw new Error('Error fetching code count');
                 }
                 const count = await response.json();
                 updateProgress(count);
-                fetchScannedArtists(); // Gescannte Gäste laden
+
+                fetchScannedArtists();
+                fetchScannedSpots();
             } catch(error) {
-                console.error('Fehler beim Abrufen der Gäste:', error);
+                console.error('Fehler beim Abrufen der Codes:', error);
             }
         }
 
@@ -479,12 +513,34 @@
                 );
                 
                 const artists = await response.json();
-                displayArtists(artists);
+                displayItems(artists, false);
                 
             } catch(error) {
                 console.error('Fehler beim Laden der Gäste:', error);
                 document.getElementById('artists-display').innerHTML = 
                     '<p class="text-danger">Fehler beim Laden der Gäste</p>';
+            }
+        }
+
+        async function fetchScannedSpots() {
+            try {
+                const scannedCodes = JSON.parse(localStorage.getItem('scannedSpots') || '[]');
+                if(scannedCodes.length === 0) {
+                    document.getElementById('spots-display').innerHTML = '<p>Noch keine Spots gescannt</p>';
+                    return;
+                }
+
+                const response = await fetch(
+                    `${WP_API_URL}/scanned-spots?codes=${encodeURIComponent(scannedCodes.join(','))}`
+                );
+                
+                const spots = await response.json();
+                displayItems(spots, true);
+                
+            } catch(error) {
+                console.error('Fehler beim Laden der Spots:', error);
+                document.getElementById('spots-display').innerHTML = 
+                    '<p class="text-danger">Fehler beim Laden der Spots</p>';
             }
         }
 
@@ -494,20 +550,31 @@
             fetch(`${WP_API_URL}/medals/${medalId}?acf_format=standard&_fields=id,title,acf`)
                 .then(response => response.json())
                 .then(medal => {
+
+                    const modal = document.getElementById('modal');
+
                     document.getElementById('modal-title').textContent = medal.title.rendered;
-                    document.getElementById('modal-image').src = medal.acf.medal_image;
-                    document.getElementById('modal-required').textContent = medal.acf.required_codes;
-                    document.getElementById('modal-description').textContent = medal.acf.reward_description;
-                    document.getElementById('medal-modal').style.display = 'flex';
+
+                    const descriptionElement = modal.querySelector('#modal-description');
+                    descriptionElement.innerHTML = `
+                        <img id="modal-image" class="medal-image" src="${medal.acf.medal_image}" alt="Medaille">
+                        <h3 class="fw-bold me-3" id="modal-title"></h3>
+                        <p><strong>Benötigte Codes:</strong> <span id="modal-required">${medal.acf.required_codes}</span></p>
+                        ${medal.acf.reward_description}
+                    `;
+
+                    modal.style.display = 'flex';
                 });
         }
 
         function closeModal() {
-            document.getElementById('medal-modal').style.display = 'none';
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+            modal.querySelector('#modal-description').innerHTML = '';
         }
 
-        document.getElementById('medal-modal').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('medal-modal')) {
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modal')) {
                 closeModal();
             }
         });
@@ -519,39 +586,42 @@
 
 
 
-        function displayArtists(artists) {
-            let artistsHTML = '';
+        function displayItems(items, spots) {
+            let itemsHTML = '';
             
-            for (let i = 0; i < artists.length; i++) {
-                const artist = artists[i];
-                artistsHTML += `
-                    <div class="artist-item" data-artist='${JSON.stringify(artist).replace(/'/g, "\\'")}'>
-                        <div>${artist.title}</div>
+            items.forEach(item => {
+                itemsHTML += `
+                    <div class="artist-card" 
+                        data-title="${item.title}"
+                        data-content="${encodeURIComponent(item.content)}"
+                        data-code="${item.code}"
+                        onclick="showModalDetails(this)">
+                        <div>${item.title}</div>
                     </div>
                 `;
-            }
-
-            document.getElementById('artists-display').innerHTML = `
-                <div class="artists-grid">${artistsHTML}</div>
-            `;
-
-            document.querySelectorAll('.artist-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const artistData = JSON.parse(item.dataset.artist);
-                    showArtistDetails(artistData);
-                });
             });
+
+            if (spots) {
+                document.getElementById('spots-display').innerHTML = 
+                    `<div class="artists-grid">${itemsHTML}</div>`;
+            } else {
+                document.getElementById('artists-display').innerHTML = 
+                    `<div class="artists-grid">${itemsHTML}</div>`;
+            }
         }
 
-        function showArtistDetails(artist) {    
-            const modal = document.getElementById('medal-modal');
-            modal.querySelector('#modal-title').innerHTML = artist.title;
-            modal.querySelector('#modal-image').style.display = 'none';
+        function showModalDetails(cardElement) {
+            const modal = document.getElementById('modal');
+            const title = cardElement.dataset.title;
+            const content = decodeURIComponent(cardElement.dataset.content);
+
+            modal.querySelector('#modal-title').innerHTML = title;
             
-            const requiredElement = modal.querySelector('#modal-required').parentElement;
-            requiredElement.style.display = 'none';
-            
-            modal.querySelector('#modal-description').innerHTML = artist.content;
+            const descriptionElement = modal.querySelector('#modal-description');
+            descriptionElement.innerHTML = `
+                ${content}
+            `;
+
             modal.style.display = 'flex';
         }
 
