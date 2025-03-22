@@ -1,10 +1,11 @@
 {
     "name": "Los Amigos MotU Convention",
     "short_name": "MotU Convention",
-    "start_url": "/index.html",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#020B10",
     "theme_color": "#020B10",
+    "scope":"/",
     "icons": [
         {
             "src": "/file0.png",
